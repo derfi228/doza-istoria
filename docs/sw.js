@@ -1,5 +1,5 @@
 // Офлайн: сайт открывается из кэша, а в фоне подтягивает свежие файлы (новые темы видны со следующего запуска).
-const CACHE = 'doza-istoria-v3';
+const CACHE = 'doza-istoria-v4';
 const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'sync.js', 'firebase-config.js', 'manifest.webmanifest',
   'data/core.js', 'data/topics.js', 'data/peter.js', 'data/ege.js', 'icons/icon.svg', 'icons/icon-192.png'];
 

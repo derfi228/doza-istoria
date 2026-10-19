@@ -774,4 +774,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('#zo
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.daily.day !== today()) { rollDay(); save(); if (route === 'home' && !Q) render(); } });
 go();
 setTimeout(greet, 700);
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js');
+  // вышла новая версия сайта: перезагружаемся один раз, чтобы сразу показать свежие темы
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController && !Q) location.reload(); });
+}
