@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Доза.История</title>
+<meta name="description" content="Личная подготовка к ЕГЭ по истории: темы, даты, правители, тесты">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#F6F4F0" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..600&family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gfo" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF4D1A"/><stop offset="1" stop-color="#FFA41C"/></linearGradient>
+  <linearGradient id="gfm" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FF9A1F"/><stop offset="1" stop-color="#FFE15A"/></linearGradient>
+  <linearGradient id="gfi" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFE98A"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+  <linearGradient id="gblue" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#5FB8FF"/><stop offset="1" stop-color="#E8F6FF"/></linearGradient>
+  <linearGradient id="gviolet" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#7B4DFF"/><stop offset="1" stop-color="#FF6AD5"/></linearGradient>
+</defs></svg>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="logo" href="#home" id="logo"><span>Доза<i>.</i>История</span></a>
+    <nav class="links">
+      <a href="#home" data-r="home">Темы</a><a href="#dates" data-r="dates">Даты</a><a href="#rulers" data-r="rulers">Правители</a><a href="#tests" data-r="tests">Тесты</a>
+    </nav>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a class="rankpill" href="#tests" id="rankpill"></a>
+      <button class="iconbtn" id="setbtn" aria-label="Настройки"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </div>
+</header>
+<main id="app"></main>
+<nav class="tabbar">
+  <a href="#home" data-r="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/></svg>Темы</a>
+  <a href="#dates" data-r="dates"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>Даты</a>
+  <a href="#rulers" data-r="rulers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17h16l-1.5-9-4 4L12 6l-2.5 6-4-4z"/><path d="M5 20h14"/></svg>Правители</a>
+  <a href="#tests" data-r="tests"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.8z"/></svg>Тесты</a>
+</nav>
+<div id="layer"></div>
+<div class="peter" id="peter" hidden><div class="bubble" id="bubble" role="status" aria-live="polite"></div><button class="peter-fig" id="peterfig" aria-label="Пётр"></button></div>
+
+<script src="data/core.js"></script>
+<script src="data/topics.js"></script>
+<script src="data/peter.js"></script>
+<script src="data/ege.js"></script>
+<script src="app.js"></script>
+<script type="module" src="sync.js"></script>
+</body>
+</html>
