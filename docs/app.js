@@ -731,7 +731,10 @@ const pairsQ = (kind, q, ds, right, extra, years) => ({kind, q, type: 'pairs', y
 function qPairs(P) { // задание 1: события и годы
   const ds = []; for (const d of shuffle(P)) { if (ds.every(x => x.y !== d.y)) ds.push(d); if (ds.length === 4) break; }
   if (ds.length < 3) return null;
-  const extra = [...new Set(shuffle(pool().filter(x => /^\d/.test(x.y) && !ds.some(d => d.y === x.y) && Math.abs(x.s - ds[0].s) < 400)).map(x => x.y))].slice(0, 2);
+  // лишние годы — как на ЕГЭ правдоподобные: из той же эпохи и того же вида (год или промежуток)
+  const ranges = ds.filter(d => !single(d)).length > 1, dist = x => Math.min(...ds.map(d => Math.abs(d.s - x.s)));
+  const cand = [...new Map(pool().filter(x => /^\d/.test(x.y) && !ds.some(d => d.y === x.y) && (ranges || single(x))).map(x => [x.y, x])).values()].sort((a, b) => dist(a) - dist(b));
+  const extra = shuffle(cand.slice(0, 5)).slice(0, 2).map(x => x.y);
   return pairsQ('Задание 1 · соответствие', 'Установите соответствие между событиями и годами', ds, d => d.y, extra, 1);
 }
 function qPairsRuler(P) { // задание 5: события и правители
@@ -799,7 +802,7 @@ function startQuiz(mode, opt = {}) {
   nextQ();
 }
 function topicTestList(tp) { // только форматы ЕГЭ: настоящие задания + хронология, соответствия, понятия
-  const P = pool().filter(d => d.tp === tp);
+  const P = pool().filter(d => d.tp === tp && (d.red || d.ege)); // главные даты: красные из скрипта и частые на ЕГЭ
   const ege = shuffle(egeFor(tp).filter(newFormat)).map(egeQ);
   const gen = [qOrder(P, 3), qOrder(P, 3), qPairs(P), qPairs(P), qPairsRuler(P)].filter(Boolean);
   const terms = shuffle(TERMS.filter(t => t.tp === tp)).map(qConcept);
