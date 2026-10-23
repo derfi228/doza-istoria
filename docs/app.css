@@ -541,3 +541,20 @@ details[open] summary{margin-bottom:6px}
 .gring{position:relative;display:grid;place-items:center;flex:none}
 .gring i{position:absolute;font:800 18px/1 var(--sans);font-style:normal;color:var(--gold-text)}
 body:has(.sheet) .peter,body:has(.rcard) .peter{display:none}
+
+/* ── соответствия как в ЕГЭ, конец конспекта ── */
+.pairs{grid-template-columns:minmax(0,1.45fr) minmax(0,.85fr)}
+.pairs .left .qo{text-align:left;font:600 15.5px/1.35 var(--sans);display:grid;grid-template-columns:24px 1fr;gap:8px;align-items:start}
+.pairs .left .qo .k{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);font:800 13px/1 var(--sans)}
+.pairs .right .qo{text-align:center;font:600 15px/1.3 var(--sans)}
+.pairs .right.yrs .qo{font:700 22px/1 var(--serif)}
+.qfeed span{line-height:1.5}
+.tfoot{display:flex;flex-direction:column;gap:14px;margin:8px 0 20px}
+.tfoot .startbig{margin-top:0}
+.tnav{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tn{display:flex;flex-direction:column;gap:4px;padding:16px 18px;border-radius:18px;border:1px solid var(--line);background:var(--card);text-decoration:none;min-width:0}
+.tn b{font:600 17px/1.25 var(--serif);color:var(--ink)}
+.tn.next{text-align:right}
+.tn.locked{opacity:.5}
+a.tn:hover{border-color:var(--ink)}
+@media (max-width:480px){.tn b{font-size:15px}.tn{padding:14px}}

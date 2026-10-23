@@ -520,12 +520,20 @@ function viewTopic(id) {
   else if (topicTab === 'more') body = viewMore(c, id);
   else if (topicTab === 'test') {
     const eg = egeFor(id).length;
-    body = `<div class="article" style="padding-top:40px"><div class="startbig"><div><span class="label">Тест по теме ${id}</span><h3 style="margin-top:8px">12 вопросов</h3></div><button class="btn ink" id="starttopic">Начать</button></div>
+    body = `<div class="article" style="padding-top:40px"><div class="startbig"><div><span class="label">Тест по теме ${id}</span><h3 style="margin-top:8px">${topicTestList(id).length} заданий в формате ЕГЭ</h3></div><button class="btn ink" id="starttopic">Начать</button></div>
       ${eg ? `<div class="startbig"><div><span class="label">Задания ЕГЭ по теме</span><h3 style="margin-top:8px">${eg} ${plural(eg, ['задание', 'задания', 'заданий'])}</h3></div><button class="btn ghost" id="starttopicege">Решать</button></div>` : ''}</div>`;
   }
   else body = `<div class="tbody"><nav class="toc">${c.sections.map((s, i) => `<a href="javascript:void 0" data-sec="s${i}">${s.h === 'Карта' ? 'Карта' : (i + 1) + '. ' + s.h}</a>`).join('')}</nav>
-    <article class="article">${c.sections.map((s, i) => `<section class="sec" id="s${i}"><h2>${s.h === 'Карта' ? '' : `<span class="n">${i + 1}</span>`}${s.h}</h2>${s.yrs ? `<p class="yrs">${s.yrs} годы</p>` : ''}<div class="blocks">${pairUp(s.blocks).map(block).join('')}</div></section>`).join('')}</article></div>`;
+    <article class="article">${c.sections.map((s, i) => `<section class="sec" id="s${i}"><h2>${s.h === 'Карта' ? '' : `<span class="n">${i + 1}</span>`}${s.h}</h2>${s.yrs ? `<p class="yrs">${s.yrs} годы</p>` : ''}<div class="blocks">${pairUp(s.blocks).map(block).join('')}</div></section>`).join('')}${topicFoot(id)}</article></div>`;
   return head + tabs + `<div class="wrap">${body}</div>`;
+}
+function topicFoot(id) {
+  const n = topicTestList(id).length;
+  const card = (t, dir) => !t ? '<span></span>' : t.open
+    ? `<a class="tn ${dir}" href="#topic-${t.id}"><span class="note">${dir === 'prev' ? '← ' : ''}Тема ${t.id}${dir === 'next' ? ' →' : ''}</span><b>${t.title}</b></a>`
+    : `<span class="tn ${dir} locked"><span class="note">Тема ${t.id} · скоро</span><b>${t.title}</b></span>`;
+  return `<div class="tfoot"><div class="startbig"><div><span class="label">Тест по теме</span><h3 style="margin-top:8px">${n} ${plural(n, ['задание', 'задания', 'заданий'])} в формате ЕГЭ</h3></div><button class="btn gold" id="endtest">Пройти тест</button></div>
+    <nav class="tnav">${card(TOPICS.find(t => t.id === id - 1), 'prev')}${card(TOPICS.find(t => t.id === id + 1), 'next')}</nav></div>`;
 }
 // абзац + узкая картинка после него встают рядом
 const pairUp = bs => bs.reduce((a, b) => { const prev = a[a.length - 1]; if (b.k === 'fig' && b.side && prev?.k === 'p') a[a.length - 1] = {k: 'pfig', p: prev, fig: b}; else a.push(b); return a; }, []);
@@ -712,13 +720,28 @@ function qRuler(d) {
   const rs = Object.values(RULERS).filter(r => r.ruler && r.id !== d.r && rulerOpen(r.id));
   return {kind: 'Кто правил?', q: `${d.t}, ${d.y}`, type: 'choice', opts: shuffle([RULERS[d.r], ...shuffle(rs).slice(0, 3)]).map(r => r.n), ans: RULERS[d.r].n, d};
 }
-function qOrder(P) {
-  const ds = []; for (const d of shuffle(P)) { if (ds.every(x => Math.abs(x.s - d.s) >= 3)) ds.push(d); if (ds.length === 4) break; }
-  return ds.length < 3 ? null : {kind: 'Хронология · ЕГЭ', q: 'От раннего к позднему', type: 'order', items: shuffle(ds), ds};
+function qOrder(P, n = 4) { // задание 2
+  const ds = []; for (const d of shuffle(P)) { if (ds.every(x => Math.abs(x.s - d.s) >= 3)) ds.push(d); if (ds.length === n) break; }
+  return ds.length < 3 ? null : {kind: 'Задание 2 · хронология', q: 'Расположите события в хронологической последовательности', type: 'order', items: shuffle(ds), ds};
 }
-function qPairs(P) {
+// соответствие, как в ЕГЭ: слева события А–Г, справа ответы и два лишних
+const pairsQ = (kind, q, ds, right, extra, years) => ({kind, q, type: 'pairs', years,
+  left: ds.map((d, i) => ({id: d.id, k: 'АБВГ'[i], label: d.t})),
+  right: shuffle([...ds.map(d => ({id: d.id, label: right(d)})), ...extra.map((label, i) => ({id: 'x' + i, label}))])});
+function qPairs(P) { // задание 1: события и годы
   const ds = []; for (const d of shuffle(P)) { if (ds.every(x => x.y !== d.y)) ds.push(d); if (ds.length === 4) break; }
-  return ds.length < 3 ? null : {kind: 'Соответствие · ЕГЭ', q: 'Соедини даты и события', type: 'pairs', ds};
+  if (ds.length < 3) return null;
+  const extra = [...new Set(shuffle(pool().filter(x => /^\d/.test(x.y) && !ds.some(d => d.y === x.y) && Math.abs(x.s - ds[0].s) < 400)).map(x => x.y))].slice(0, 2);
+  return pairsQ('Задание 1 · соответствие', 'Установите соответствие между событиями и годами', ds, d => d.y, extra, 1);
+}
+function qPairsRuler(P) { // задание 5: события и правители
+  const ds = []; for (const d of shuffle(P.filter(x => x.r && RULERS[x.r].ruler))) { if (ds.every(x => x.r !== d.r)) ds.push(d); if (ds.length === 4) break; }
+  if (ds.length < 3) return null;
+  const extra = shuffle(Object.values(RULERS).filter(r => r.ruler && rulerOpen(r.id) && !ds.some(d => d.r === r.id))).slice(0, 2).map(r => r.n);
+  return pairsQ('Задание 5 · исторические деятели', 'Установите соответствие между событиями и правителями', ds, d => RULERS[d.r].n, extra, 0);
+}
+function qConcept(t) { // задание 20: смысл понятия, сверка с образцом
+  return {kind: 'Задание 20 · понятие', q: '', type: 'ege', term: t.w, t: {kind: 'open', type: 'Тип 20', ans: '', body: `<p>Объясните смысл понятия <b>«${t.w}»</b>.</p>`, sol: `<p><b>${t.w}</b> — ${lc(t.d)}</p>`}};
 }
 function qPortrait() {
   const rs = Object.values(RULERS).filter(r => r.img && rulerOpen(r.id)), r = pick(rs);
@@ -728,7 +751,9 @@ function qTerm(tp) {
   const open = TERMS.filter(t => openTopics().includes(t.tp)), ts = open.filter(t => !tp || t.tp === tp), t = pick(ts.length ? ts : open);
   return {kind: 'Что значит термин?', q: t.w, type: 'choice', opts: shuffle([t, ...shuffle(open.filter(x => x !== t)).slice(0, 3)]).map(x => x.d), ans: t.d, term: t.w};
 }
-function qEge(list) { const t = pick(list); return t && {kind: `Задание ЕГЭ · ${t.type.replace('Тип ', 'тип ')}`, q: '', type: 'ege', t}; }
+const egeQ = t => ({kind: t.type.includes('Д') ? 'Задание ЕГЭ · старый формат' : `Задание ${t.type.replace('Тип ', '')} · ЕГЭ`, q: '', type: 'ege', t});
+const newFormat = t => !t.type.includes('Д');
+function qEge(list) { const t = pick(list); return t && egeQ(t); }
 function makeQ(mode, opt) {
   let P = pool();
   if (opt.topic) P = P.filter(d => d.tp === opt.topic);
@@ -766,18 +791,20 @@ const flameLv = n => n >= 20 ? 5 : n >= 10 ? 4 : n >= 6 ? 3 : n >= 3 ? 2 : n >= 
 function startQuiz(mode, opt = {}) {
   const egeList = mode === 'ege' ? shuffle(opt.topic ? egeFor(opt.topic) : EGE_OPEN()) : null;
   Q = {mode, opt, n: 0, total: opt.topic && mode !== 'ege' ? 12 : opt.ruler ? 5 : mode === 'mix' || mode === 'ege' ? (egeList ? egeList.length : 0) : 10, right: 0, combo: 0, best: 0, xp: 0};
-  if (mode === 'ege') { Q.list = egeList.map(t => ({kind: `Задание ЕГЭ · ${t.type.replace('Тип ', 'тип ')}`, q: '', type: 'ege', t})); if (!opt.topic) Q.total = 0; }
-  else if (opt.topic) Q.list = topicTestList(opt.topic);
+  if (mode === 'ege') { Q.list = egeList.map(egeQ); if (!opt.topic) Q.total = 0; }
+  else if (opt.topic) { Q.list = topicTestList(opt.topic); Q.total = Q.list.length; }
   document.body.classList.add('quizon');
   if (!S.ach.includes('first')) award('first');
   say(PETER.start, 'h', 2200);
   nextQ();
 }
-function topicTestList(tp) {
+function topicTestList(tp) { // только форматы ЕГЭ: настоящие задания + хронология, соответствия, понятия
   const P = pool().filter(d => d.tp === tp);
-  const qs = [qOrder(P), qPairs(P), qTerm(tp), qTerm(tp), ...shuffle(egeFor(tp)).slice(0, 3).map(t => ({kind: `Задание ЕГЭ · ${t.type.replace('Тип ', 'тип ')}`, q: '', type: 'ege', t}))].filter(Boolean);
-  for (const d of shuffle(P.filter(single)).slice(0, 8)) qs.push(pick([qEventYear(d), qInput(d), qCentury(d)]));
-  while (qs.length < 12 && P.length) qs.push(pick([qYearEvent(pick(P)), qTerm(tp)]));
+  const ege = shuffle(egeFor(tp).filter(newFormat)).map(egeQ);
+  const gen = [qOrder(P, 3), qOrder(P, 3), qPairs(P), qPairs(P), qPairsRuler(P)].filter(Boolean);
+  const terms = shuffle(TERMS.filter(t => t.tp === tp)).map(qConcept);
+  const qs = [...ege.slice(0, 5), ...gen, ...terms.slice(0, 2)];
+  for (const extra of [ege.slice(5), terms.slice(2)]) for (const q of extra) if (qs.length < 12) qs.push(q);
   return shuffle(qs).slice(0, 12);
 }
 function nextQ() {
@@ -802,7 +829,7 @@ function drawQ() {
     <div class="qopts ${q.years ? 'years' : ''}">${q.opts.map(o => `<button class="qo ${st.answered ? (o === q.ans ? 'ok' : o === st.pick ? 'no' : '') : ''}" data-o="${esc(o)}" ${st.answered ? 'disabled' : ''}>${esc(o)}</button>`).join('')}</div>`;
   else if (q.type === 'input') inner = `<form class="qin" id="qin"><input id="qval" inputmode="numeric" autocomplete="off" placeholder="Год" aria-label="Год" ${st.answered ? 'disabled' : ''} value="${esc(st.val || '')}"><button class="btn ink" ${st.answered ? 'disabled' : ''}>Ответить</button></form>`;
   else if (q.type === 'order') { const right = q.ds.slice().sort((a, b) => a.s - b.s); inner = `<div class="qopts qorder">${q.items.map(d => { const i = st.sel.indexOf(d.id); return `<button class="qo ${i >= 0 ? 'sel' : ''} ${st.answered ? (right[i]?.id === d.id ? 'ok' : 'no') : ''}" data-id="${d.id}" ${st.answered ? 'disabled' : ''}>${i >= 0 ? `<span class="k">${i + 1}</span>` : ''}${esc(d.t)}${st.answered ? ` <span class="note">${d.y}</span>` : ''}</button>`; }).join('')}</div>`; }
-  else if (q.type === 'pairs') { st.right ??= shuffle(q.ds); inner = `<div class="pairs"><div class="col left">${q.ds.map(d => `<button class="qo ${st.sel.includes(d.id) ? 'gone' : ''} ${st.l === d.id ? 'sel' : ''}" data-l="${d.id}">${d.y}</button>`).join('')}</div><div class="col">${st.right.map(d => `<button class="qo ${st.sel.includes(d.id) ? 'gone' : ''} ${st.bad === d.id ? 'no' : ''}" data-rr="${d.id}">${esc(d.t)}</button>`).join('')}</div></div>`; }
+  else if (q.type === 'pairs') inner = `<div class="pairs"><div class="col left">${q.left.map(x => `<button class="qo ${st.sel.includes(x.id) ? 'gone' : ''} ${st.l === x.id ? 'sel' : ''}" data-l="${x.id}"><span class="k">${x.k}</span>${esc(x.label)}</button>`).join('')}</div><div class="col right ${q.years ? 'yrs' : ''}">${q.right.map(x => `<button class="qo ${st.sel.includes(x.id) ? 'gone' : ''} ${st.bad === x.id ? 'no' : ''}" data-rr="${x.id}">${esc(x.label)}</button>`).join('')}</div></div>`;
   else if (q.type === 'flip') { const d = q.d; inner = `<div class="flip ${st.flipped ? 'on' : ''}" id="flip"><div class="in"><div class="f">${q.front === 'y' ? `<span class="yy num">${d.y}</span>` : `<span class="tt">${esc(d.t)}</span>`}<small>Нажми, чтобы перевернуть</small></div><div class="b"><span class="yy num">${d.y}</span><span class="tt">${esc(d.t)}</span>${d.m ? `<span class="mnem" style="background:none">${esc(d.m)}</span>` : ''}</div></div></div>
     ${st.flipped ? `<div class="fliprow"><button class="btn ghost" data-self="0">Не знал</button><button class="btn ink" data-self="1">Знал</button></div>` : ''}`; }
   else if (q.type === 'ege') {
@@ -814,6 +841,7 @@ function drawQ() {
   }
   let feed = '';
   if (st.answered && q.type === 'ege') feed = `<div class="qfeed ${st.ok ? 'ok' : 'no'}"><b>${st.ok ? 'Верно' : 'Неверно'}${q.t.ans ? `: ${esc(q.t.ans.split('|')[0])}` : ''}</b></div><details class="egesol-d" ${st.ok ? '' : 'open'}><summary>Разбор</summary><div class="egesol">${q.t.sol}</div></details>`;
+  else if (st.answered && q.type === 'pairs') feed = `<div class="qfeed ${st.ok ? 'ok' : 'no'}"><b>${st.ok ? 'Верно' : 'С ошибками'}</b><span>${q.left.map(x => `${x.k} — ${esc(q.right.find(r => r.id === x.id).label)}`).join(' · ')}</span></div>`;
   else if (st.answered && q.type !== 'flip') feed = `<div class="qfeed ${st.ok ? 'ok' : 'no'}"><b>${st.ok ? 'Верно' : 'Неверно'}${!st.ok && q.ans ? `: ${esc(q.ans)}` : ''}</b>${!st.ok && q.d?.m ? `<span class="mn">${esc(q.d.m)}</span>` : ''}${!st.ok && q.cent ? `<span>${q.d.y}: ${esc(q.d.t)}</span>` : ''}</div>`;
   const next = st.answered ? `<button class="btn ink qnext" id="qnext">${Q.total && Q.n + 1 >= Q.total ? 'Результат' : 'Дальше'}</button>` : '';
   const sparks = lv >= 3 ? Array.from({length: lv * 2}, (_, i) => `<i class="spark" style="left:${18 + (i * 37) % 28}px;--dx:${(i % 2 ? 1 : -1) * (6 + i * 3 % 14)}px;animation-delay:${(i * .23).toFixed(2)}s"></i>`).join('') : '';
@@ -876,7 +904,7 @@ function bindQ() {
     L.querySelectorAll('[data-rr]').forEach(b => b.onclick = () => {
       if (st.l == null) return;
       const id = b.dataset.rr;
-      if (id === st.l) { st.sel.push(id); st.l = null; mark(DATE[id], true); S.c.pairs++; if (st.sel.length === q.ds.length) return answer(!st.miss); }
+      if (id === st.l) { st.sel.push(id); st.l = null; mark(DATE[id], true); S.c.pairs++; if (st.sel.length === q.left.length) return answer(!st.miss); }
       else { st.bad = id; st.miss = true; mark(DATE[st.l], false); }
       drawQ();
     });
@@ -924,6 +952,7 @@ function bind() {
   $('#allranks')?.addEventListener('click', () => { showAllRanks = !showAllRanks; render(); });
   $('#egeall')?.addEventListener('click', () => startQuiz('ege', {}));
   $('#starttopic')?.addEventListener('click', () => startQuiz('topic', {topic: +route.split('-')[1]}));
+  $('#endtest')?.addEventListener('click', () => startQuiz('topic', {topic: +route.split('-')[1]}));
   $('#starttopicege')?.addEventListener('click', () => startQuiz('ege', {topic: +route.split('-')[1]}));
   if (route === 'rulers') { highlight(); const sel = $('#tree [data-node="yaroslav"]'); if (sel) { const box = sel.closest('.treebox'); box.scrollLeft = sel.offsetLeft - box.clientWidth / 2 + 52; } }
 }
