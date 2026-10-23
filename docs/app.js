@@ -38,11 +38,7 @@ const PETER_SVG = `<svg viewBox="0 0 140 180" aria-hidden="true">
   <g fill="#2F1D12"><circle cx="26" cy="68" r="14"/><circle cx="22" cy="86" r="13"/><circle cx="26" cy="102" r="12"/><circle cx="35" cy="113" r="9"/><circle cx="114" cy="68" r="14"/><circle cx="118" cy="86" r="13"/><circle cx="114" cy="102" r="12"/><circle cx="105" cy="113" r="9"/></g>
   <ellipse cx="70" cy="78" rx="44" ry="40" fill="#F3C9A8"/>
   <path d="M27 72Q30 54 46 50Q38 60 37 76Z" fill="#2F1D12"/><path d="M113 72Q110 54 94 50Q102 60 103 76Z" fill="#2F1D12"/>
-  <path d="M4 50C10 38 22 29 34 27C42 13 98 13 106 27C118 29 130 38 136 50C116 48 92 50 70 60C48 50 24 48 4 50Z" fill="#1A1716"/>
-  <path d="M22 44C38 38 56 41 70 54C84 41 102 38 118 44C104 34 86 31 70 35C54 31 36 34 22 44Z" fill="#2E2925"/>
-  <path d="M4 50C24 48 48 50 70 60C92 50 116 48 136 50" stroke="#D4A43C" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M34 27C42 13 98 13 106 27" stroke="#D4A43C" stroke-width="2" fill="none" stroke-linecap="round"/>
-  <circle cx="70" cy="45" r="3.4" fill="#D4A43C"/>
+  <!--hat-->
   <path class="br1" d="M44 67Q51 63 58 65" stroke="#2F1D12" stroke-width="3.2" stroke-linecap="round" fill="none"/>
   <path class="br2" d="M82 65Q89 63 96 67" stroke="#2F1D12" stroke-width="3.2" stroke-linecap="round" fill="none"/>
   <g class="e-n"><ellipse cx="51" cy="81" rx="6" ry="7.5" fill="#141414"/><ellipse cx="89" cy="81" rx="6" ry="7.5" fill="#141414"/><circle cx="53" cy="78" r="2" fill="#FFFFFF"/><circle cx="91" cy="78" r="2" fill="#FFFFFF"/></g>
@@ -60,14 +56,14 @@ const FLAME = `<svg class="flame" viewBox="0 0 40 52" aria-hidden="true">
   <path class="fi" fill="url(#gfi)" d="M20 30C21 34 24 36 24 40C24 44 22 46 20 46C18 46 16 44 16 40C16 37 18 35 20 30Z"/>
 </svg>`;
 $('#logo').insertAdjacentHTML('afterbegin', ICON);
-$('#peterfig').innerHTML = PETER_SVG;
 
 /* ── состояние: в браузере всегда, в Firebase — после входа (sync.js) ── */
 const KEY = 'dozaIstoria.v1';
 const freshState = () => ({xp: 0, best: 0, right: 0, ach: [], k: {}, own: {}, topicTest: {}, taps: 0, wrongRow: 0,
   daily: {day: null, cur: null, step: 'new', checks: null, ci: 0, lastOk: null, row: 0, t: 0},
   c: {century: 0, pairs: 0, portraits: 0, orderRow: 0, fastRow: 0, ege: 0, terms: []},
-  set: {theme: null, font: 'a', peter: true, t: 0}, epoch: 0, t: 0});
+  set: {theme: null, font: 'a', peter: true, goal: 150, t: 0}, look: {accent: 'gold', flame: 'classic', hat: 'tricorn', t: 0},
+  dayXp: {d: '', xp: 0}, goalRow: 0, goalLast: null, epoch: 0, t: 0});
 let S;
 try { S = Object.assign(freshState(), JSON.parse(localStorage.getItem(KEY))); } catch { S = freshState(); }
 S.c = Object.assign(freshState().c, S.c);
@@ -89,6 +85,11 @@ function mergeState(a, b) {
   m.daily = newer(a.daily, b.daily);
   m.set = newer(a.set, b.set);
   for (const k of Object.keys(m.c)) m.c[k] = k === 'terms' ? [...new Set([...(a.c?.terms || []), ...(b.c?.terms || [])])] : Math.max(a.c?.[k] || 0, b.c?.[k] || 0);
+  m.look = newer(a.look, b.look);
+  const da = a.dayXp?.d || '', db = b.dayXp?.d || '';
+  m.dayXp = da === db ? {d: da, xp: Math.max(a.dayXp?.xp || 0, b.dayXp?.xp || 0)} : (da > db ? a.dayXp : b.dayXp);
+  const ga = a.goalLast || '', gb = b.goalLast || '', g = ga > gb ? a : ga < gb ? b : ((a.goalRow || 0) >= (b.goalRow || 0) ? a : b);
+  m.goalRow = g.goalRow || 0; m.goalLast = g.goalLast || null;
   m.wrongRow = a.wrongRow || 0;
   m.t = Math.max(a.t || 0, b.t || 0);
   return m;
@@ -139,6 +140,141 @@ function checkAchievements() {
   if (TERMS.filter(t => openTopics().includes(t.tp)).every(t => S.c.terms.includes(t.w))) award('terms');
 }
 
+/* ── награды за чины: цвет сайта, пламя серии, шапка Петра ── */
+const HATS = {
+  tricorn: {n: 'Треуголка', svg: `<path d="M4 50C10 38 22 29 34 27C42 13 98 13 106 27C118 29 130 38 136 50C116 48 92 50 70 60C48 50 24 48 4 50Z" fill="#1A1716"/>
+  <path d="M22 44C38 38 56 41 70 54C84 41 102 38 118 44C104 34 86 31 70 35C54 31 36 34 22 44Z" fill="#2E2925"/>
+  <path d="M4 50C24 48 48 50 70 60C92 50 116 48 136 50" stroke="#D4A43C" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M34 27C42 13 98 13 106 27" stroke="#D4A43C" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="70" cy="45" r="3.4" fill="#D4A43C"/>`},
+  helm: {n: 'Шлем дружинника', svg: `<path d="M28 60C28 34 46 16 70 6C94 16 112 34 112 60Z" fill="#9AA3AB"/>
+  <path d="M70 8C82 15 92 28 97 46" stroke="#D2D8DD" stroke-width="4" fill="none" stroke-linecap="round" opacity=".7"/>
+  <rect x="24" y="52" width="92" height="11" rx="5" fill="#6E767E"/><path d="M66 60h8v20l-4 4-4-4z" fill="#6E767E"/><circle cx="70" cy="6" r="3" fill="#D2D8DD"/>`},
+  murmolka: {n: 'Мурмолка', svg: `<path d="M34 56C32 30 44 14 70 14C96 14 108 30 106 56Z" fill="#9C2B33"/>
+  <path d="M52 20C48 30 46 42 46 54" stroke="#B8434B" stroke-width="3" fill="none" stroke-linecap="round" opacity=".6"/>
+  <rect x="26" y="44" width="88" height="17" rx="8" fill="#5A3A22"/><path d="M32 52h76" stroke="#7A5434" stroke-width="3" stroke-dasharray="2 4"/><circle cx="70" cy="14" r="4" fill="#D4A43C"/>`},
+  gorlatka: {n: 'Горлатная шапка', svg: `<path d="M36 58L30 6Q70 0 110 6L104 58Z" fill="#3B2A1E"/>
+  <path d="M30 6Q70 0 110 6Q70 13 30 6Z" fill="#4E3828"/><path d="M48 11V56M70 9V58M92 11V56" stroke="#4E3828" stroke-width="3" opacity=".8"/>
+  <rect x="30" y="50" width="80" height="10" rx="5" fill="#2A1D14"/>`},
+  monomakh: {n: 'Шапка Мономаха', svg: `<path d="M36 52C36 24 50 12 70 12C90 12 104 24 104 52Z" fill="#D4A43C"/>
+  <path d="M70 12V52M53 17L46 52M87 17L94 52" stroke="#A97C22" stroke-width="2.5"/>
+  <circle cx="56" cy="34" r="3.2" fill="#B3392C"/><circle cx="84" cy="34" r="3.2" fill="#2F7D5A"/><circle cx="70" cy="27" r="3.2" fill="#3C6ACB"/>
+  <rect x="28" y="46" width="84" height="16" rx="8" fill="#3A2618"/><path d="M70 12V1M64 5h12" stroke="#D4A43C" stroke-width="3" stroke-linecap="round"/>`},
+  crown: {n: 'Царский венец', svg: `<path d="M28 58V28L44 42L56 18L70 36L84 18L96 42L112 28V58Z" fill="#D4A43C"/>
+  <rect x="28" y="48" width="84" height="12" rx="3" fill="#B8862E"/>
+  <circle cx="56" cy="18" r="4" fill="#E9C46A"/><circle cx="84" cy="18" r="4" fill="#E9C46A"/><circle cx="28" cy="28" r="3.5" fill="#E9C46A"/><circle cx="112" cy="28" r="3.5" fill="#E9C46A"/>
+  <circle cx="70" cy="54" r="4" fill="#B3392C"/><circle cx="50" cy="54" r="3" fill="#2F7D5A"/><circle cx="90" cy="54" r="3" fill="#3C6ACB"/>`},
+  imperial: {n: 'Императорская корона', svg: `<path d="M30 58C30 26 46 14 67 18V58Z" fill="#D7DEE5"/><path d="M110 58C110 26 94 14 73 18V58Z" fill="#D7DEE5"/>
+  <path d="M65 18C65 9 75 9 75 18V58H65Z" fill="#B9C3CD"/><g fill="#FFFFFF"><circle cx="70" cy="24" r="2.2"/><circle cx="70" cy="34" r="2.2"/><circle cx="70" cy="44" r="2.2"/><circle cx="48" cy="30" r="2"/><circle cx="92" cy="30" r="2"/></g>
+  <rect x="26" y="50" width="88" height="11" rx="5" fill="#B9C3CD"/><circle cx="70" cy="7" r="4.5" fill="#B3392C"/>`},
+};
+// l — светлая тема, d — тёмная
+const ACCENTS = {
+  gold: {n: 'Золото', l: {gold: '#E3B95A', goldText: '#9A6B14', plaque: '#F1E6C9', plaqueYear: '#8E6210'}, d: {gold: '#DDB458', goldText: '#DDB458', plaque: '#262016', plaqueYear: '#E3BC62'}},
+  kin: {n: 'Киноварь', l: {gold: '#E07E57', goldText: '#A2401F', plaque: '#F6E1D6', plaqueYear: '#A2401F'}, d: {gold: '#E58A64', goldText: '#EE9A76', plaque: '#2E1C16', plaqueYear: '#F0A07E'}},
+  azure: {n: 'Лазурь', l: {gold: '#7FB0E2', goldText: '#2D619B', plaque: '#E1ECF7', plaqueYear: '#2D619B'}, d: {gold: '#7FB2E6', goldText: '#8DBDEB', plaque: '#16222F', plaqueYear: '#9CC6F0'}},
+  emerald: {n: 'Изумруд', l: {gold: '#6CC596', goldText: '#1F7A4D', plaque: '#DFF1E6', plaqueYear: '#1F7A4D'}, d: {gold: '#6CCB98', goldText: '#7AD3A3', plaque: '#13261C', plaqueYear: '#8CDCB1'}},
+  purple: {n: 'Пурпур', l: {gold: '#B494DE', goldText: '#6B3FA0', plaque: '#ECE2F6', plaqueYear: '#6B3FA0'}, d: {gold: '#B898E3', goldText: '#C3A6EA', plaque: '#221A2E', plaqueYear: '#CDB3EF'}},
+  silver: {n: 'Серебро', l: {gold: '#B9C1CA', goldText: '#55606B', plaque: '#ECEEF1', plaqueYear: '#4A535D'}, d: {gold: '#C3CAD2', goldText: '#CBD2D9', plaque: '#1E2125', plaqueYear: '#D6DCE2'}},
+  ruby: {n: 'Рубин', l: {gold: '#E06A7E', goldText: '#A11F37', plaque: '#F7DEE3', plaqueYear: '#A11F37'}, d: {gold: '#E8768A', goldText: '#EF8C9D', plaque: '#2E161B', plaqueYear: '#F29AAA'}},
+  black: {n: 'Чернёное золото', l: {gold: '#2A2420', goldInk: '#E3BC62', goldText: '#8E6210', plaque: '#2A2420', plaqueInk: '#F1EFEC', plaqueYear: '#E3BC62', pbtn: '#E3BC62', pbtnInk: '#1E1C1A'}, d: {gold: '#E3BC62', goldText: '#E3BC62', plaque: '#050505', plaqueYear: '#E3BC62'}},
+};
+// [низ внешнего, верх внешнего, низ среднего, верх среднего, сердцевина]
+const FLAMES = {
+  classic: {n: 'Огонь', c: ['#FF4D1A', '#FFA41C', '#FF9A1F', '#FFE15A', '#FFE98A']},
+  blue: {n: 'Синее пламя', c: ['#1E5BFF', '#4FA8FF', '#4FA8FF', '#A8E0FF', '#D6F2FF']},
+  green: {n: 'Зелёное пламя', c: ['#0E9F4F', '#3FDB7A', '#3FDB7A', '#B6F5C8', '#E2FFE9']},
+  violet: {n: 'Фиолетовое пламя', c: ['#6A2CFF', '#B04DFF', '#B04DFF', '#FF8BEA', '#FFD6F6']},
+  white: {n: 'Белое пламя', c: ['#8D9BAB', '#DDE6EE', '#DDE6EE', '#FFFFFF', '#FFFFFF']},
+  gold: {n: 'Золотое пламя', c: ['#B8860B', '#FFD24A', '#FFD24A', '#FFF1A8', '#FFF8DC']},
+  rainbow: {n: 'Радужное пламя', c: ['#FF3B3B', '#FFB13B', '#2FD27A', '#3BC8FF', '#E3B8FF']},
+};
+const LOOK = {accent: ACCENTS, flame: FLAMES, hat: HATS};
+const LOOK_DEFAULT = {accent: 'gold', flame: 'classic', hat: 'tricorn'};
+const rankIdx = (xp = S.xp) => { let i = 0; RANKS.forEach((r, k) => { if (xp >= r[1]) i = k; }); return i; };
+const rewardRank = (kind, id) => RANKS.findIndex(r => r[2]?.[kind] === id);
+const unlocked = (kind, id) => id === LOOK_DEFAULT[kind] || (rewardRank(kind, id) >= 0 && rewardRank(kind, id) <= rankIdx());
+const rewardName = rw => rw && Object.entries(rw).map(([k, v]) => LOOK[k][v].n)[0];
+const peterSvg = hat => PETER_SVG.replace('<!--hat-->', (HATS[hat] || HATS.tricorn).svg);
+function applyLook() {
+  const L = {...LOOK_DEFAULT, ...S.look}, r = document.documentElement.style;
+  const dark = S.set.theme === 'dark' || (!S.set.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+  const a = (ACCENTS[L.accent] || ACCENTS.gold)[dark ? 'd' : 'l'];
+  const vars = {gold: '--gold', goldInk: '--gold-ink', goldText: '--gold-text', plaque: '--plaque', plaqueInk: '--plaque-ink', plaqueYear: '--plaque-year', pbtn: '--pbtn', pbtnInk: '--pbtn-ink'};
+  for (const [k, v] of Object.entries(vars)) a[k] ? r.setProperty(v, a[k]) : r.removeProperty(v);
+  if (dark && !a.pbtn) r.setProperty('--pbtn', a.gold);
+  const c = (FLAMES[L.flame] || FLAMES.classic).c;
+  [['gfo', 0, 1], ['gfm', 2, 3], ['gfi', 4, 4]].forEach(([id, i, j]) => { const st = document.querySelectorAll(`#${id} stop`); st[0].setAttribute('stop-color', c[i]); st[1].setAttribute('stop-color', j === 4 ? '#FFFFFF' : c[j]); });
+  $('#peterfig').innerHTML = peterSvg(L.hat);
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => applyLook());
+function wear(kind, id) {
+  if (!unlocked(kind, id)) return;
+  S.look = {...LOOK_DEFAULT, ...S.look, [kind]: id, t: Date.now()};
+  if (kind === 'hat' && id !== 'tricorn') award('wardrobe');
+  save(); applyLook();
+  if (kind === 'hat') say(PETER.hat?.[id] || 'Сидит как влитая.', 'h');
+}
+function rewardPreview(rw) {
+  if (!rw) return '';
+  const [k, v] = Object.entries(rw)[0];
+  if (k === 'accent') { const a = ACCENTS[v].l; return `<span class="sw" style="background:${a.gold};box-shadow:inset 0 0 0 6px ${a.plaque}"></span>`; }
+  if (k === 'flame') { const c = FLAMES[v].c; return `<span class="sw" style="background:linear-gradient(0deg,${c[0]},${c[1]} 55%,${c[3]})"></span>`; }
+  return `<span class="hatprev">${peterSvg(v)}</span>`;
+}
+
+/* ── опыт и цель дня ── */
+const GOALS = [[100, 'Лёгкая'], [150, 'Обычная'], [300, 'Серьёзная']];
+const goalXp = () => S.set.goal || 150;
+const todayXp = () => (S.dayXp?.d === today() ? S.dayXp.xp : 0);
+const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const goalRow = () => (S.goalLast === today() || S.goalLast === yesterday() ? S.goalRow || 0 : 0);
+function addXp(n) {
+  const before = rankIdx();
+  S.xp += n;
+  if (S.dayXp?.d !== today()) S.dayXp = {d: today(), xp: 0};
+  const was = S.dayXp.xp; S.dayXp.xp += n;
+  if (was < goalXp() && S.dayXp.xp >= goalXp()) {
+    S.goalRow = S.goalLast === yesterday() ? (S.goalRow || 0) + 1 : 1; S.goalLast = today();
+    award('goal1'); if (S.goalRow >= 7) award('goal7'); if (S.goalRow >= 30) award('goal30');
+    toast(`Цель дня выполнена · ${S.goalRow} ${plural(S.goalRow, ['день', 'дня', 'дней'])} подряд`);
+    say(PETER.goalDone, 'h', 4500);
+  }
+  if (S.dayXp.xp >= 500) award('xp500');
+  const after = rankIdx();
+  if (after > before) {
+    const name = RANKS[after][0];
+    if (name === 'Князь') award('prince'); if (name === 'Царь') award('tsar'); if (name === 'Император') award('emperor');
+    say(fill(draw(PETER.rankUp), {rank: name}), 'o', 5000);
+    if (Q) Q.rankUp = after; else showRankUp(after);
+  }
+  renderPill();
+}
+function ring(v, max, size = 18) {
+  const r = size / 2 - 2.5, c = 2 * Math.PI * r, p = Math.min(1, v / max);
+  return `<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" aria-hidden="true"><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="${c * p} ${c}" transform="rotate(-90 ${size / 2} ${size / 2})"/></svg>`;
+}
+function renderPill() {
+  $('#rankpill').innerHTML = `${ring(todayXp(), goalXp())}<span>${RANKS[rankIdx()][0]}</span><span class="num">${S.xp} XP</span>`;
+}
+function toast(text) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = text; document.body.appendChild(t);
+  setTimeout(() => t.classList.add('on'), 20); setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 400); }, 3200);
+}
+function showRankUp(i) {
+  const [name, , rw, info] = RANKS[i], nx = RANKS[i + 1];
+  const conf = Array.from({length: 36}, (_, k) => `<i style="left:${(k * 37) % 100}%;background:${['#E3B95A', '#B03A22', '#2F7D5A', '#3C6ACB', '#B494DE'][k % 5]};animation-delay:${(k % 9) * .12}s;animation-duration:${2.2 + (k % 5) * .35}s"></i>`).join('');
+  $('#layer').innerHTML = `<div class="rankup" role="dialog" aria-label="Новый чин"><div class="confetti" aria-hidden="true">${conf}</div><div class="ru-card">
+    <span class="label">Новый чин</span><h2>${name}</h2><p class="ru-info">${info}</p>
+    ${rw ? `<div class="ru-reward">${rewardPreview(rw)}<div><span class="label">Награда</span><b>${rewardName(rw)}</b></div></div>` : ''}
+    <div class="ru-acts">${rw ? `<button class="btn gold" id="ruwear">Надеть</button>` : ''}<button class="btn ghost" id="ruok">Дальше</button></div>
+    ${nx ? `<p class="note">Следующий чин «${nx[0]}» через ${nx[1] - S.xp} XP${nx[2] ? ` · ${rewardName(nx[2]).toLowerCase()}` : ''}</p>` : ''}
+  </div></div>`;
+  const close = () => { $('#layer').innerHTML = ''; render(); };
+  $('#ruok').onclick = close;
+  $('#ruwear')?.addEventListener('click', () => { const [k, v] = Object.entries(rw)[0]; wear(k, v); close(); });
+}
+
 /* ── настройки ── */
 const FONTS = [['a', 'Lora', 'Manrope'], ['b', 'Playfair Display', 'Nunito'], ['c', 'Cormorant Garamond', 'Raleway']];
 const FONT_URL = {b: 'family=Playfair+Display:ital,wght@0,400..800;1,400..600&family=Nunito:wght@400;500;600;700;800', c: 'family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Raleway:wght@400;500;600;700;800'};
@@ -152,8 +288,17 @@ function applySettings() {
   loadFont(S.set.font);
   S.set.font === 'a' ? delete r.dataset.font : (r.dataset.font = S.set.font);
   $('#peter').hidden = !S.set.peter;
+  applyLook();
 }
 applySettings();
+function wardrobe() {
+  const L = {...LOOK_DEFAULT, ...S.look};
+  const row = (kind, title) => `<div class="wr"><span class="note">${title}</span><div class="wr-items">${Object.entries(LOOK[kind]).map(([id, o]) => {
+    const ok = unlocked(kind, id), ri = rewardRank(kind, id);
+    return `<button class="wi ${L[kind] === id ? 'on' : ''} ${ok ? '' : 'locked'}" data-wear="${kind}:${id}" ${ok ? '' : 'disabled'} title="${o.n}">${rewardPreview({[kind]: id})}<span>${ok ? o.n : '🔒 ' + RANKS[ri][0]}</span></button>`;
+  }).join('')}</div></div>`;
+  return row('accent', 'Цвет') + row('flame', 'Пламя серии') + row('hat', 'Шапка Петра');
+}
 function openSettings() {
   FONTS.forEach(([k]) => loadFont(k));
   const sync = window.Sync, user = sync?.user;
@@ -165,6 +310,8 @@ function openSettings() {
     <section><span class="label">Аккаунт</span>${acc}</section>
     <section><span class="label">Тема</span><div class="seg">${[[null, 'Как в системе'], ['light', 'Светлая'], ['dark', 'Тёмная']].map(([k, n]) => `<button data-th="${k}" class="${S.set.theme === k ? 'on' : ''}">${n}</button>`).join('')}</div></section>
     <section><span class="label">Шрифт</span><div class="fonts">${FONTS.map(([k, s, b]) => `<button class="fontopt ${S.set.font === k ? 'on' : ''}" data-font="${k}"><span class="s1" style="font-family:'${s}',serif;font-weight:600">Ярослав Мудрый, 1019</span><span class="s2" style="font-family:'${b}',sans-serif">Первый письменный закон, Русская правда</span></button>`).join('')}</div></section>
+    <section><span class="label">Цель дня</span><div class="seg">${GOALS.map(([v, n]) => `<button data-goal="${v}" class="${goalXp() === v ? 'on' : ''}">${n} · ${v} XP</button>`).join('')}</div></section>
+    <section><span class="label">Гардероб</span>${wardrobe()}</section>
     <section><label class="switch" for="petersw">Пётр с комментариями<input type="checkbox" id="petersw" ${S.set.peter ? 'checked' : ''}></label></section>
     <section><button class="btn ghost" id="reset">Сбросить весь прогресс</button></section>
     <section class="note">Задания: «Решу ЕГЭ» (hist-ege.sdamgia.ru). Картины и фото: Wikimedia Commons, авторы указаны в подписях.</section>
@@ -175,6 +322,8 @@ function openSettings() {
   $('#signout')?.addEventListener('click', () => sync.signOut());
   $('#layer').querySelectorAll('[data-th]').forEach(b => b.onclick = () => { S.set.theme = b.dataset.th === 'null' ? null : b.dataset.th; S.set.t = Date.now(); save(); applySettings(); openSettings(); });
   $('#layer').querySelectorAll('[data-font]').forEach(b => b.onclick = () => { S.set.font = b.dataset.font; S.set.t = Date.now(); save(); applySettings(); openSettings(); });
+  $('#layer').querySelectorAll('[data-goal]').forEach(b => b.onclick = () => { S.set.goal = +b.dataset.goal; S.set.t = Date.now(); save(); renderPill(); openSettings(); });
+  $('#layer').querySelectorAll('[data-wear]').forEach(b => b.onclick = () => { const [k, v] = b.dataset.wear.split(':'); wear(k, v); openSettings(); });
   $('#petersw').onchange = e => { S.set.peter = e.target.checked; S.set.t = Date.now(); save(); applySettings(); if (S.set.peter) say('Я вернулся. Скучал?', 'h'); };
   $('#reset').onclick = e => {
     if (!e.target.dataset.sure) { e.target.dataset.sure = 1; e.target.textContent = 'Точно сбросить? Нажми ещё раз'; return; }
@@ -229,8 +378,7 @@ function go() {
 }
 window.addEventListener('hashchange', () => { topicTab = 'notes'; go(); });
 function render() {
-  const {r} = rankOf(S.xp);
-  $('#rankpill').innerHTML = `<span>${r[0]}</span><span class="num">${S.xp} XP</span>`;
+  renderPill();
   const app = $('#app');
   if (route === 'dates') app.innerHTML = viewDates();
   else if (route === 'rulers') app.innerHTML = viewRulers();
@@ -249,10 +397,15 @@ function viewHome() {
       <div class="stat"><div><b class="num">${openTopics().length} из ${TOPICS.length}</b>тем открыто</div><div><b class="num">${learned}</b>${plural(learned, ['дата выучена', 'даты выучены', 'дат выучено'])}</div><div><b class="num">${Object.keys(RULERS).filter(k => rulerOpen(k)).length}</b>правителей</div></div>
     </div>
     <div class="daily" id="daily">${viewDaily()}</div>
+    ${goalBar()}
     <div class="tgrid">${TOPICS.filter(t => t.open).map(topicCard).join('')}</div>
     <div class="sechead" style="margin-top:40px"><h2>Скоро</h2></div>
     <div class="tgrid soon">${TOPICS.filter(t => !t.open).map(topicCard).join('')}</div>
   </div>`;
+}
+function goalBar() {
+  const v = todayXp(), g = goalXp(), row = goalRow(), done = v >= g;
+  return `<div class="goalbar ${done ? 'done' : ''}"><span class="gring">${ring(v, g, 44)}${done ? '<i>✓</i>' : ''}</span><div><b>${done ? 'Цель дня выполнена' : 'Цель дня'}</b><span class="num">${Math.min(v, g)} из ${g} XP${row ? ` · ${row} ${plural(row, ['день', 'дня', 'дней'])} подряд` : ''}</span></div>${done ? '' : `<a class="btn ink" href="#tests">Набрать</a>`}</div>`;
 }
 function topicCard(t) {
   const pic = t.img ? `<img src="${img(t.img)}" alt="" loading="lazy">` : '';
@@ -301,15 +454,18 @@ function viewDaily() {
       ${next.m ? `<div class="mn">${esc(next.m)}</div>` : ''}
       <div class="row"><button class="btn dark" id="dlearn">Запомнил</button><a class="btn ghost" href="#topic-${next.tp}">Тема ${next.tp}</a></div>`;
   }
-  return `${dots('done')}<span class="label">Дата дня</span><h3>На сегодня всё</h3>${cur ? `<p class="ev" style="opacity:.7">${cur.y} · ${esc(cur.t)}</p>` : ''}
-    <div class="row"><a class="btn dark" href="#dates">Повторить ещё</a></div>`;
+  if (!cur) return `${dots('done')}<span class="label">Дата дня</span><h3>На сегодня всё</h3><div class="row"><a class="btn dark" href="#dates">Повторить ещё</a></div>`;
+  return `${dots('done')}<span class="label">Дата дня · запомнил ✓</span>
+    <div class="big num">${cur.y}</div><div class="ev">${esc(cur.t)}</div>
+    ${cur.m ? `<div class="mn">${esc(cur.m)}</div>` : ''}${S.own[cur.id]?.v ? `<div class="mn own">${esc(S.own[cur.id].v)}</div>` : ''}
+    <div class="row"><a class="btn dark" href="#topic-${cur.tp}">Тема ${cur.tp}</a><a class="btn ghost" href="#dates">Повторить даты</a></div>`;
 }
 function bindDaily() {
   const el = $('#daily'); if (!el) return;
   const D = S.daily, cur = DATE[D.cur];
   const rer = () => { D.t = Date.now(); el.innerHTML = viewDaily(); bindDaily(); save(); };
   const checked = ok => {
-    D.lastOk = ok; mark(cur, ok); D.step = 'checked'; D.copts = null;
+    D.lastOk = ok; mark(cur, ok); D.step = 'checked'; D.copts = null; if (ok) addXp(30);
     D.row = ok ? (D.row || 0) + 1 : 0; if (D.row >= 7) award('day7');
     rer();
     say(ok ? PETER.dailyOk : PETER.dailyNo, ok ? 'h' : 's');
@@ -328,11 +484,11 @@ function bindDaily() {
     if (D.step === 'new') sayNew();
   });
   el.querySelectorAll('.opts button[data-o]').forEach(b => b.onclick = () => {
-    const c = D.checks[D.ci]; c.ans = b.dataset.o; const ok = c.ans === DATE[c.id].y; mark(DATE[c.id], ok); rer();
+    const c = D.checks[D.ci]; c.ans = b.dataset.o; const ok = c.ans === DATE[c.id].y; mark(DATE[c.id], ok); if (ok) addXp(10); rer();
     say(ok ? PETER.ok : PETER.no, ok ? 'h' : 's');
   });
   $('#dold', el)?.addEventListener('click', () => { if (D.ci + 1 < D.checks.length) D.ci++; else { D.step = 'new'; sayNew(); } rer(); });
-  $('#dlearn', el)?.addEventListener('click', () => { const n = nextDaily(); if (n) { D.cur = n.id; mark(n, true); } D.step = 'done'; rer(); say(PETER.dailyDone, 'h'); });
+  $('#dlearn', el)?.addEventListener('click', () => { const n = nextDaily(); if (n) { D.cur = n.id; mark(n, true); addXp(20); } D.step = 'done'; rer(); say(PETER.dailyDone, 'h'); });
 }
 function sayNew() { const n = nextDaily(); if (n && /^\d/.test(n.y)) say(fill(draw(PETER.dailyNew), {old: parseInt(n.y, 10) + 5508}), 'o', 7000); }
 function yearOptions(d) { // ловушки: соседние даты и ±1–2 года
@@ -518,16 +674,19 @@ function highlight() {
 }
 
 /* ── тесты ── */
+let showAllRanks = false;
 function viewTests() {
-  const {r, nx} = rankOf(S.xp);
+  const i = rankIdx(), r = RANKS[i], nx = RANKS[i + 1];
   const pct = nx ? Math.round((S.xp - r[1]) / (nx[1] - r[1]) * 100) : 100;
   const groups = [...new Set(ACHIEVEMENTS.map(a => a.g))];
   const eg = EGE_OPEN().length;
   return `<div class="wrap">
     <div class="phead"><p class="kicker">Все пройденные темы</p><h1>Тесты</h1></div>
-    <div class="rankcard"><div><span class="label">Звание</span><h2>${r[0]}</h2><div class="xpbar"><i style="width:${pct}%"></i></div>
-      <p class="nx num">${S.xp} XP${nx ? ` · до «${nx[0]}» ${nx[1] - S.xp}` : ''}</p></div>
-      <div class="ladder">${RANKS.slice().reverse().map(x => `<div class="${x[0] === r[0] ? 'me' : ''}"><span>${x[0]}</span><span class="num">${x[1]}</span></div>`).join('')}</div></div>
+    <div class="rankcard"><div><span class="label">Чин ${i + 1} из ${RANKS.length}</span><h2>${r[0]}</h2><p class="rinfo">${r[3]}</p><div class="xpbar"><i style="width:${pct}%"></i></div>
+      <p class="nx num">${S.xp} XP${nx ? ` · до «${nx[0]}» ${nx[1] - S.xp}` : ''}</p>
+      ${nx?.[2] ? `<div class="nextrw">${rewardPreview(nx[2])}<span>Следующая награда<b>${rewardName(nx[2])}</b></span></div>` : ''}</div>
+      <div class="ladder">${RANKS.map((x, k) => ({x, k})).filter(({k}) => showAllRanks || (k >= i - 2 && k <= i + 3)).reverse().map(({x, k}) => `<div class="${k === i ? 'me' : k < i ? 'past' : ''}"><span>${x[0]}${x[2] ? ' <small>' + rewardName(x[2]) + '</small>' : ''}</span><span class="num">${x[1]}</span></div>`).join('')}
+        <button class="linkbtn" id="allranks">${showAllRanks ? 'Свернуть' : `Все ${RANKS.length} чинов`}</button></div></div>
     <div class="startbig"><h3>Бесконечный тест</h3><button class="btn gold" id="endless">Начать</button></div>
     ${eg ? `<div class="startbig"><div><h3>Задания ЕГЭ</h3><p class="note" style="margin-top:4px">${eg} ${plural(eg, ['задание', 'задания', 'заданий'])} по пройденным темам, с разборами</p></div><button class="btn ghost" id="egeall">Решать</button></div>` : ''}
     <div class="statrow"><div><b class="num">${S.best}</b><span>лучшая серия</span></div><div><b class="num">${S.right}</b><span>правильных</span></div><div><b class="num">${S.ach.length} из ${ACHIEVEMENTS.length}</b><span>достижений</span></div></div>
@@ -669,7 +828,6 @@ function drawQ() {
 function answer(ok) {
   const q = Q.cur; q.state.answered = true; q.state.ok = ok;
   if (q.d && q.type !== 'pairs' && q.type !== 'order') mark(q.d, ok);
-  const before = rankOf(S.xp).r[0];
   if (q.type === 'ege') S.c.ege++;
   if (ok) {
     if (q.cent) S.c.century++;
@@ -678,7 +836,7 @@ function answer(ok) {
     if (q.type === 'order') { S.c.orderRow++; if (S.c.orderRow >= 10) award('order'); }
     S.c.fastRow = Date.now() - Q.shown < 5000 ? S.c.fastRow + 1 : 0; if (S.c.fastRow >= 10) award('fast');
     Q.combo++; Q.right++; S.right++; Q.best = Math.max(Q.best, Q.combo); S.wrongRow = 0;
-    const g = (q.type === 'ege' ? 20 : 10) * Math.min(5, 1 + Math.floor(Q.combo / 3)); Q.xp += g; S.xp += g; Q.pulse = true;
+    const g = (q.type === 'ege' ? 20 : 10) * Math.min(5, 1 + Math.floor(Q.combo / 3)); Q.xp += g; addXp(g); Q.pulse = true;
     S.best = Math.max(S.best, Q.combo);
     const f = document.createElement('div'); f.className = 'xpfly num'; f.textContent = `+${g}`; document.body.appendChild(f); setTimeout(() => f.remove(), 900);
     if (PETER.combo[Q.combo]) say(PETER.combo[Q.combo], 'h', 3500); else if (Math.random() < .45) say(PETER.ok, 'h', 2200);
@@ -691,8 +849,6 @@ function answer(ok) {
     if (Q.combo > 0) Q.smoke = true;
     Q.combo = 0; S.wrongRow = (S.wrongRow || 0) + 1; if (S.wrongRow >= 3) award('oops');
   }
-  const after = rankOf(S.xp).r[0];
-  if (after !== before) { say(fill(draw(PETER.rankUp), {rank: after}), 'o', 5000); if (after === 'Князь') award('prince'); if (after === 'Царь') award('tsar'); }
   checkAchievements();
   save(); drawQ();
 }
@@ -727,7 +883,7 @@ function bindQ() {
   }
   if (q.type === 'flip') {
     $('#flip').onclick = () => { if (!st.flipped) { st.flipped = true; drawQ(); } };
-    L.querySelectorAll('[data-self]').forEach(b => b.onclick = () => { const ok = b.dataset.self === '1'; mark(q.d, ok); if (ok) { Q.combo++; Q.right++; Q.pulse = true; } else { if (Q.combo) Q.smoke = true; Q.combo = 0; } Q.n++; save(); nextQ(); });
+    L.querySelectorAll('[data-self]').forEach(b => b.onclick = () => { const ok = b.dataset.self === '1'; mark(q.d, ok); if (ok) { Q.combo++; Q.right++; Q.pulse = true; Q.xp += 5; addXp(5); } else { if (Q.combo) Q.smoke = true; Q.combo = 0; } Q.n++; save(); nextQ(); });
   }
 }
 function finishQuiz() {
@@ -741,7 +897,7 @@ function finishQuiz() {
     ${topicTest ? `<p>${pct >= 80 ? 'Тема пройдена' : 'Нужно 80%'}</p>` : ''}
     <button class="btn ink" id="qclose">Готово</button></div></div>`;
   if (n) say(good ? PETER.finishGood : PETER.finishBad, good ? 'h' : 's', 5000);
-  $('#qclose').onclick = () => { $('#layer').innerHTML = ''; Q = null; document.body.classList.remove('quizon'); render(); };
+  $('#qclose').onclick = () => { const up = Q.rankUp; $('#layer').innerHTML = ''; Q = null; document.body.classList.remove('quizon'); render(); if (up != null) showRankUp(up); };
 }
 
 /* ── привязки ── */
@@ -761,10 +917,11 @@ function bind() {
   document.querySelectorAll('#app [data-f]').forEach(b => b.onclick = () => { dFilter = b.dataset.f; render(); });
   document.querySelectorAll('#app [data-date]').forEach(b => b.onclick = () => { const id = b.dataset.date; openDate = openDate === id ? null : id; const y = window.scrollY; render(); window.scrollTo(0, y); });
   document.querySelectorAll('#app [data-own]').forEach(t => {
-    t.oninput = () => { S.own[t.dataset.own] = {v: t.value, t: Date.now()}; save(); };
-    t.onchange = () => { if (t.value.trim()) say(PETER.ownMnemonic, 'h'); if (Object.values(S.own).filter(o => o?.v?.trim()).length >= 10) award('own10'); };
+    t.oninput = () => { S.own[t.dataset.own] = {...S.own[t.dataset.own], v: t.value, t: Date.now()}; save(); };
+    t.onchange = () => { const o = S.own[t.dataset.own]; if (o && t.value.trim().length >= 5 && !o.xp) { o.xp = 1; addXp(10); save(); } if (t.value.trim()) say(PETER.ownMnemonic, 'h'); if (Object.values(S.own).filter(o => o?.v?.trim()).length >= 10) award('own10'); };
   });
   $('#endless')?.addEventListener('click', () => startQuiz('mix', {}));
+  $('#allranks')?.addEventListener('click', () => { showAllRanks = !showAllRanks; render(); });
   $('#egeall')?.addEventListener('click', () => startQuiz('ege', {}));
   $('#starttopic')?.addEventListener('click', () => startQuiz('topic', {topic: +route.split('-')[1]}));
   $('#starttopicege')?.addEventListener('click', () => startQuiz('ege', {topic: +route.split('-')[1]}));
