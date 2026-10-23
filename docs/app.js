@@ -105,7 +105,9 @@ window.onAuthChange = () => { if ($('.sheet')) openSettings(); };
 const lvl = id => S.k[id]?.l ?? 0;
 const isWeak = id => (S.k[id]?.w ?? 0) > 0 && lvl(id) < 3;
 const openTopics = () => TOPICS.filter(t => t.open).map(t => t.id);
-const pool = () => DATES.filter(d => openTopics().includes(d.tp));
+const isMain = d => d.red || d.ege;
+const allDates = () => DATES.filter(d => openTopics().includes(d.tp));
+const pool = () => allDates().filter(isMain); // только главные даты: всё, что спрашивают тесты и считают счётчики
 const rankOf = xp => { let r = RANKS[0], nx = null; for (let i = 0; i < RANKS.length; i++) if (xp >= RANKS[i][1]) { r = RANKS[i]; nx = RANKS[i + 1] || null; } return {r, nx}; };
 function mark(d, ok) {
   const k = S.k[d.id] = {...(S.k[d.id] || {l: 0, w: 0})};
@@ -124,7 +126,7 @@ function award(id) {
   const a = ACHIEVEMENTS.find(x => x.id === id);
   say(draw(PETER.achievement) + ` «${a.n}».`, 'h', 5000);
 }
-const knowRuler = r => { const ev = (r.ev || []).filter(d => openTopics().includes(d.tp)); return ev.length ? Math.round(ev.reduce((a, d) => a + lvl(d.id), 0) / ev.length / 5 * 100) : 0; };
+const knowRuler = r => { const ev = (r.ev || []).filter(d => openTopics().includes(d.tp) && isMain(d)); return ev.length ? Math.round(ev.reduce((a, d) => a + lvl(d.id), 0) / ev.length / 5 * 100) : 0; };
 function checkAchievements() {
   const p = pool(), learned = p.filter(d => lvl(d.id) >= 3).length;
   if (learned >= 25) award('dates25'); if (learned >= 50) award('dates50'); if (learned >= 100) award('dates100');
@@ -134,7 +136,7 @@ function checkAchievements() {
   if (rs.some(r => knowRuler(r) === 100)) award('ruler100');
   const toMono = ['rurik', 'oleg', 'igor', 'olga', 'svyatoslav', 'vladimir', 'yaroslav', 'izyaslav', 'vsevolod_ya', 'svyatopolk2', 'monomakh'];
   if (toMono.every(k => knowRuler(RULERS[k]) >= 60)) award('rurik');
-  if (openTopics().includes(5) && DATES.filter(d => d.tp === 5).every(d => lvl(d.id) >= 3)) award('horde');
+  if (openTopics().includes(5) && DATES.filter(d => d.tp === 5 && isMain(d)).every(d => lvl(d.id) >= 3)) award('horde');
   if (S.c.century >= 30) award('century'); if (S.c.pairs >= 100) award('pairs'); if (S.c.portraits >= 20) award('portraits');
   if (S.c.ege >= 20) award('ege20');
   if (TERMS.filter(t => openTopics().includes(t.tp)).every(t => S.c.terms.includes(t.w))) award('terms');
@@ -573,19 +575,19 @@ function viewMore(c, id) {
 }
 
 /* ── даты ── */
-let dFilter = 'all', openDate = null;
+let dFilter = 'red', openDate = null;
 function viewDates() {
   const p = pool();
   const weakN = p.filter(d => isWeak(d.id)).length;
   const learned = p.filter(d => lvl(d.id) >= 3).length;
-  const list = p.filter(d => dFilter === 'all' || (dFilter === 'weak' ? isWeak(d.id) : dFilter === 'red' ? (d.red || d.ege) : d.tp === +dFilter)).sort((a, b) => a.s - b.s);
+  const list = (dFilter === 'all' ? allDates() : p.filter(d => dFilter === 'red' || (dFilter === 'weak' ? isWeak(d.id) : d.tp === +dFilter))).sort((a, b) => a.s - b.s);
   const groups = {};
   list.forEach(d => (groups[century(d)] ??= []).push(d));
   const modes = [['flip', 'Карточки', '⇄'], ['input', 'Введи год', '1223'], ['choice', 'Выбери из 4', '4'], ['pairs', 'Найди пары', '⇌'], ['century', 'Век', 'XIII'], ['ruler', 'Дата и правитель', '♛']];
   return `<div class="wrap">
     <div class="phead"><p class="kicker">Общее повторение</p><h1>Даты</h1><p class="sub2 num">${learned} из ${p.length} выучено · ${weakN} ${plural(weakN, ['слабая', 'слабые', 'слабых'])}</p></div>
     <div class="modes">${modes.map(([k, n, g]) => `<button class="mode" data-mode="${k}"><span class="glyph">${g}</span><b>${n}</b></button>`).join('')}</div>
-    <div class="chips">${[['all', 'Все'], ['weak', `Слабые · ${weakN}`], ['red', 'Главные'], ...openTopics().map(i => [String(i), 'Тема ' + i])].map(([k, n]) => `<button class="chip ${dFilter === k ? 'on' : ''}" data-f="${k}">${n}</button>`).join('')}</div>
+    <div class="chips">${[['red', 'Главные'], ['weak', `Слабые · ${weakN}`], ['all', 'Все из скриптов'], ...openTopics().map(i => [String(i), 'Тема ' + i])].map(([k, n]) => `<button class="chip ${dFilter === k ? 'on' : ''}" data-f="${k}">${n}</button>`).join('')}</div>
     ${Object.entries(groups).map(([c, ds]) => `<div class="century"><h3>${roman(+c)} век</h3><div class="dl">${ds.map(dateItem).join('')}</div></div>`).join('') || '<p style="margin-top:30px">Слабых дат нет</p>'}
   </div>`;
 }
@@ -760,7 +762,7 @@ function qEge(list) { const t = pick(list); return t && egeQ(t); }
 function makeQ(mode, opt) {
   let P = pool();
   if (opt.topic) P = P.filter(d => d.tp === opt.topic);
-  if (opt.ruler) P = (RULERS[opt.ruler].ev || []).filter(d => openTopics().includes(d.tp));
+  if (opt.ruler) P = (RULERS[opt.ruler].ev || []).filter(d => openTopics().includes(d.tp) && isMain(d));
   if (!P.length) P = pool();
   const sP = P.filter(single), d = weighted(sP.length ? sP : P);
   const rulerQ = () => { const R = P.filter(x => x.r && RULERS[x.r].ruler); return R.length ? qRuler(weighted(R)) : qEventYear(d); };
@@ -802,7 +804,7 @@ function startQuiz(mode, opt = {}) {
   nextQ();
 }
 function topicTestList(tp) { // только форматы ЕГЭ: настоящие задания + хронология, соответствия, понятия
-  const P = pool().filter(d => d.tp === tp && (d.red || d.ege)); // главные даты: красные из скрипта и частые на ЕГЭ
+  const P = pool().filter(d => d.tp === tp);
   const ege = shuffle(egeFor(tp).filter(newFormat)).map(egeQ);
   const gen = [qOrder(P, 3), qOrder(P, 3), qPairs(P), qPairs(P), qPairsRuler(P)].filter(Boolean);
   const terms = shuffle(TERMS.filter(t => t.tp === tp)).map(qConcept);
